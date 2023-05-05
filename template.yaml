@@ -8,10 +8,26 @@ Description: >
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
+    Tags:
+      Environment: !Ref Environment
+      Name: SpacesAI-Checkin
     Timeout: 3
     MemorySize: 128
+Parameters:
+  Environment:
+    Type: String
+    Description: SpacesAI
+    Default: dev
 
 Resources:
+  UserCheckinTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: String
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
   UserFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -24,8 +40,18 @@ Resources:
         Checkin:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
-            Path: /checkin
+            Path: /checkin/{id}
             Method: get
+      Environment:
+        Variables:
+          # USER_CHECKIN_CONNECTION_TABLE_NAME: !Ref UserCheckinTableName
+          USER_CHECKIN_TABLE: !Ref UserCheckinTable
+          USER_CHECKIN_TABLE_ARN: !GetAtt UserCheckinTable.Arn
+      Policies:
+        # - DynamoDBCrudPolicy:
+        #     TableName: !Ref UserCheckinTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserCheckinTable
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

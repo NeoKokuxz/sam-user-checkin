@@ -1,4 +1,6 @@
 const checkinService = require('./checkin.js');
+const convertMsToHM = require('./timeHelper.js');
+
 // const axios = require('axios')
 // const url = 'http://checkip.amazonaws.com/';
 let response;
@@ -16,21 +18,33 @@ let response;
  *
  */
 async function lambdaHandler(event, context) {
-  let testUser = 12345;
-  let bodyMessage = await checkinService(testUser);
-  try {
-    // const ret = await axios(url);
-    response = {
-      statusCode: 200,
-      body: JSON.stringify({
-        message: bodyMessage,
-        // location: ret.data.trim()
-      }),
-    };
-  } catch (err) {
-    console.log(err);
-    return err;
+  let user = event.pathParameters;
+
+  //Call checkin service to validate checkin
+  let response = await checkinService(user.id);
+  let code = '';
+  let bodyMessage = '';
+  let resetCount = true;
+  if (response.validation) {
+    // Already Checked in
+    code = 400;
+    bodyMessage = true;
+    resetCount = false;
+  } else {
+    code = 200;
+    bodyMessage = false;
   }
+
+  response = {
+    statusCode: code,
+    body: JSON.stringify({
+      alreadyCheckin: bodyMessage,
+      checkinTime: response.checkinTime,
+      dailyResetTime: response.resetTime,
+      resetPermission: resetCount,
+      hoursBeforeReset: response.hoursBeforeReset,
+    }),
+  };
 
   return response;
 }
